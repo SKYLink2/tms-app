@@ -31,6 +31,104 @@
 $ npm install
 ```
 
+## Database configuration
+
+The backend loads database settings from `backend/.env` (or the process
+environment) using the `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, and
+`DB_NAME` variables. Set `DB_PASSWORD` to the password for the PostgreSQL user
+configured by `DB_USER`; the Compose password only initializes a new database
+volume and does not change the password in an existing volume.
+
+On startup, database migrations assign official company numbers to existing
+loads, add the origin/destination and optional driver assignment fields, and
+create the required tables when they do not exist. Automatic schema
+synchronization is disabled so startup does not issue destructive or
+incompatible schema changes.
+
+Load detail tracking fields, shift notes, broker and seal-photo data are
+migrated on startup. Load documents and photos are stored under
+`backend/uploads/<load-id>/` and served from `/uploads/`; this directory is
+ignored by Git. Uploads accept JPEG, PNG, WebP, and PDF files up to 10 MB
+(seal and securement photos must be images). Back up this directory alongside
+the database, and use durable shared storage before running multiple backend
+instances.
+
+## Staged loads and load-board accounts
+
+The load migration adds `DRAFT`, `QUOTED`, and `PENDING_ASSIGNMENT` staging
+statuses, dispatcher-scoped temporary numbers (`DISP-<USERNAME>-<SEQUENCE>`),
+starting at sequence 101, and year-scoped company numbers
+(`LD-<YEAR>-<SEQUENCE>`), starting at sequence 1001. The server assigns both
+numbers. Assigning both a driver and truck unit promotes a draft to `ASSIGNED`
+and allocates its company number. Pickup and delivery dates are saved with each
+load. Existing loads are assigned company numbers during migration so they
+remain on the operational board.
+
+Load-board routes require an authenticated load-board account. Configure these
+independent settings in the backend environment before first login:
+
+- `LOADS_ADMIN_USERNAME`: username for the initial administrator account.
+- `LOADS_ADMIN_PASSWORD`: initial administrator password, at least 16
+  characters.
+- `LOADS_SESSION_SECRET`: independent random signing secret, at least 32
+  characters, for eight-hour HTTP-only session cookies.
+
+The initial administrator is created the first time a login is attempted, if
+the load-board account table is empty. Admins and owners can provision
+dispatcher, dispatch-manager, owner, admin, and driver accounts from the load
+board. When creating a driver account, link it to its driver-directory record.
+Drivers can see only operational loads assigned to that linked driver and can
+report sequential trip milestones from the mobile Driver Portal
+(`ASSIGNED` → `DISPATCHED` → `AT_PICKUP` → `IN_TRANSIT` → `AT_DELIVERY`).
+Uploading a POD moves an active operational load to `DELIVERED`. Dispatchers
+can see their own drafts and operational loads; managers and owners can see all
+loads. Keep the load-board credentials and signing secret separate from
+Compliance credentials and never commit them.
+
+## Private Compliance documents
+
+Compliance records and their document downloads require the single administrator
+login. Saving a compliance profile also creates or links its driver-directory
+record, so it is available in load assignment and the Drivers page. Matching is
+limited to a unique email plus first/last name, or a unique phone plus full
+name; ambiguous matches create a separate driver rather than linking the wrong
+person. Existing compliance profiles are linked or added to the driver
+directory by the startup migration. Removing a compliance profile does not
+remove the driver-directory record or affect assigned loads.
+
+Configure these backend environment variables before using the Compliance
+module:
+
+- `COMPLIANCE_ADMIN_USERNAME`: the administrator login name.
+- `COMPLIANCE_ADMIN_PASSWORD`: a strong password with at least 16 characters.
+- `COMPLIANCE_SESSION_SECRET`: a randomly generated value of at least 32
+  characters used to sign eight-hour, HTTP-only, SameSite=Strict session
+  cookies.
+- `COMPLIANCE_FILE_ENCRYPTION_KEY`: exactly 64 hexadecimal characters (32
+  random bytes) for AES-256-GCM file encryption.
+- `COMPLIANCE_PRIVATE_FILES_DIRECTORY`: optional private storage path. The
+  default is `backend/private-compliance-files/`; it must not be placed under
+  the public `backend/uploads/` directory.
+- `FRONTEND_ORIGIN`: the exact frontend origin allowed by CORS and mutating
+  request origin checks; defaults to `http://localhost:3001`.
+
+Generate independent secrets using Node.js, for example:
+
+```bash
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+```
+
+Use a generated value for the session secret and a separate generated value for
+the file encryption key. Set the username and password only in the backend
+environment; never expose them as `NEXT_PUBLIC_*` variables or commit them.
+Compliance uploads accept PDF, JPEG, PNG, and WebP files up to 10 MB. Files are
+kept outside the public static directory, encrypted at rest, downloaded only
+through an authenticated endpoint, and returned as attachment downloads.
+Back up the encrypted private directory and the encryption key separately;
+documents cannot be recovered if the key is lost. Production deployments must
+use HTTPS and keep the frontend and API on the same site so strict cookies are
+sent.
+
 ## Compile and run the project
 
 ```bash

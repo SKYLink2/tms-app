@@ -1,6 +1,10 @@
-'use client';
+"use client";
 
-import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { useCallback, useEffect, useState } from "react";
+import type { Driver } from "@/types/driver";
+import { LOAD_STATUSES } from "@/types/load";
+import { formatPersonName } from "@/lib/person-name";
+import { fetchDrivers } from "@/lib/drivers";
 
 interface NewLoadModalProps {
   isOpen: boolean;
@@ -8,98 +12,135 @@ interface NewLoadModalProps {
   onLoadCreated: () => void;
 }
 
-export default function NewLoadModal({ isOpen, onClose, onLoadCreated }: NewLoadModalProps) {
+export default function NewLoadModal({
+  isOpen,
+  onClose,
+  onLoadCreated,
+}: NewLoadModalProps) {
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [driversLoading, setDriversLoading] = useState(false);
+  const [driversError, setDriversError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    load_number: '',
-    broker: '',
-    customer: '',
-    pickup_location: '',
-    delivery_location: '',
-    pickup_date: '',
-    delivery_date: '',
-    rate: '',
-    miles: '',
-    weight: '',
-    commodity: '',
-    status: 'Available',
-    notes: '',
+    origin: "",
+    destination: "",
+    broker: "",
+    rate: "",
+    pickupDate: "",
+    pickupTime: "",
+    deliveryDate: "",
+    deliveryTime: "",
+    status: "DRAFT",
+    driverId: "",
+    truckUnitNumber: "",
   });
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+
+  const loadDrivers = useCallback(async (signal: AbortSignal) => {
+    setDriversLoading(true);
+    setDriversError(null);
+    try {
+      setDrivers(await fetchDrivers(apiUrl, signal));
+    } catch (err: unknown) {
+      if (!signal.aborted) {
+        setDriversError(
+          err instanceof Error ? err.message : "Could not load drivers.",
+        );
+      }
+    } finally {
+      if (!signal.aborted) setDriversLoading(false);
+    }
+  }, [apiUrl]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(
+      () => void loadDrivers(controller.signal),
+      0,
+    );
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [isOpen, loadDrivers]);
+
   if (!isOpen) return null;
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-
     try {
-      // Format numeric fields properly before sending
       const payload = {
-        ...formData,
-        rate: Number(formData.rate),
-        miles: formData.miles ? Number(formData.miles) : undefined,
-        weight: formData.weight ? Number(formData.weight) : undefined,
-        // Format local date inputs to ISO strings if provided
-        pickup_date: formData.pickup_date ? new Date(formData.pickup_date).toISOString() : new Date().toISOString(),
-        delivery_date: formData.delivery_date ? new Date(formData.delivery_date).toISOString() : new Date().toISOString(),
+        origin: formData.origin,
+        destination: formData.destination,
+        broker: formData.broker,
+        rate: parseFloat(formData.rate),
+        pickupDate: formData.pickupDate || null,
+        pickupTime: formData.pickupTime || null,
+        deliveryDate: formData.deliveryDate || null,
+        deliveryTime: formData.deliveryTime || null,
+        status: formData.status,
+        driverId: formData.driverId ? parseInt(formData.driverId) : undefined,
+        truckUnitNumber: formData.truckUnitNumber || undefined,
       };
 
       const res = await fetch(`${apiUrl}/loads`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(Array.isArray(errData.message) ? errData.message.join(', ') : errData.message || 'Failed to create load');
-      }
+      if (!res.ok) throw new Error("Failed to create load");
 
-      // Success! Reset form and close modal
       setFormData({
-        load_number: '',
-        broker: '',
-        customer: '',
-        pickup_location: '',
-        delivery_location: '',
-        pickup_date: '',
-        delivery_date: '',
-        rate: '',
-        miles: '',
-        weight: '',
-        commodity: '',
-        status: 'Available',
-        notes: '',
+        origin: "",
+        destination: "",
+        broker: "",
+        rate: "",
+        pickupDate: "",
+        pickupTime: "",
+        deliveryDate: "",
+        deliveryTime: "",
+        status: "DRAFT",
+        driverId: "",
+        truckUnitNumber: "",
       });
       onLoadCreated();
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to create load');
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden my-8">
-        <div className="flex justify-between items-center bg-gray-750 px-6 py-4 border-b border-gray-700">
-          <h2 className="text-xl font-bold text-white">Create New Load</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-xl font-bold">
-            &times;
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="bg-gray-800 border border-gray-700 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+        <div className="flex justify-between items-center p-6 border-b border-gray-700">
+          <h2 className="text-xl font-bold text-white">Add New Load</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white text-xl font-semibold transition"
+          >
+            ✕
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
             <div className="bg-red-900/50 border border-red-500 text-red-200 p-3 rounded-lg text-sm">
               {error}
@@ -108,184 +149,201 @@ export default function NewLoadModal({ isOpen, onClose, onLoadCreated }: NewLoad
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Load Number *</label>
+              <label className="block text-xs font-medium text-gray-300 mb-1">
+                Origin *
+              </label>
               <input
                 type="text"
-                name="load_number"
+                name="origin"
                 required
-                value={formData.load_number}
+                placeholder="City, State"
+                value={formData.origin}
                 onChange={handleChange}
-                placeholder="e.g. LD-1004"
-                className="w-full bg-gray-900 border border-gray-750 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
               />
             </div>
-
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Broker *</label>
+              <label className="block text-xs font-medium text-gray-300 mb-1">
+                Destination *
+              </label>
               <input
                 type="text"
-                name="broker"
+                name="destination"
                 required
-                value={formData.broker}
+                placeholder="City, State"
+                value={formData.destination}
                 onChange={handleChange}
-                placeholder="e.g. TQL, Coyote"
-                className="w-full bg-gray-900 border border-gray-750 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
               />
             </div>
+          </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Customer</label>
-              <input
-                type="text"
-                name="customer"
-                value={formData.customer}
-                onChange={handleChange}
-                placeholder="Shipper / Receiver Name"
-                className="w-full bg-gray-900 border border-gray-750 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
-              />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-2">
+              <label className="block text-xs font-medium text-gray-300">
+                Pickup date
+                <input
+                  type="date"
+                  name="pickupDate"
+                  value={formData.pickupDate}
+                  onChange={handleChange}
+                  className="mt-1 w-full rounded-lg border border-gray-700 bg-gray-900 px-2 py-2 text-sm text-white"
+                />
+              </label>
+              <label className="block text-xs font-medium text-gray-300">
+                Pickup time
+                <input
+                  type="time"
+                  name="pickupTime"
+                  value={formData.pickupTime}
+                  onChange={handleChange}
+                  className="mt-1 w-full rounded-lg border border-gray-700 bg-gray-900 px-2 py-2 text-sm text-white"
+                />
+              </label>
             </div>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="block text-xs font-medium text-gray-300">
+                Delivery date
+                <input
+                  type="date"
+                  name="deliveryDate"
+                  value={formData.deliveryDate}
+                  onChange={handleChange}
+                  className="mt-1 w-full rounded-lg border border-gray-700 bg-gray-900 px-2 py-2 text-sm text-white"
+                />
+              </label>
+              <label className="block text-xs font-medium text-gray-300">
+                Delivery time
+                <input
+                  type="time"
+                  name="deliveryTime"
+                  value={formData.deliveryTime}
+                  onChange={handleChange}
+                  className="mt-1 w-full rounded-lg border border-gray-700 bg-gray-900 px-2 py-2 text-sm text-white"
+                />
+              </label>
+            </div>
+          </div>
 
+          <label className="block text-xs font-medium text-gray-300">
+            Truck unit number (required with driver to assign)
+            <input
+              name="truckUnitNumber"
+              value={formData.truckUnitNumber}
+              onChange={handleChange}
+              className="mt-1 w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white"
+            />
+          </label>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-300 mb-1">
+              Broker
+            </label>
+            <input
+              type="text"
+              name="broker"
+              placeholder="Broker or brokerage"
+              value={formData.broker}
+              onChange={handleChange}
+              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Rate ($) *</label>
+              <label className="block text-xs font-medium text-gray-300 mb-1">
+                Rate ($) *
+              </label>
               <input
                 type="number"
                 step="0.01"
                 name="rate"
                 required
+                placeholder="1500.00"
                 value={formData.rate}
                 onChange={handleChange}
-                placeholder="2500.00"
-                className="w-full bg-gray-900 border border-gray-750 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
               />
             </div>
-
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Pickup Location *</label>
-              <input
-                type="text"
-                name="pickup_location"
-                required
-                value={formData.pickup_location}
-                onChange={handleChange}
-                placeholder="Chicago, IL"
-                className="w-full bg-gray-900 border border-gray-750 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Delivery Location *</label>
-              <input
-                type="text"
-                name="delivery_location"
-                required
-                value={formData.delivery_location}
-                onChange={handleChange}
-                placeholder="Atlanta, GA"
-                className="w-full bg-gray-900 border border-gray-750 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Pickup Date *</label>
-              <input
-                type="datetime-local"
-                name="pickup_date"
-                required
-                value={formData.pickup_date}
-                onChange={handleChange}
-                className="w-full bg-gray-900 border border-gray-750 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Delivery Date *</label>
-              <input
-                type="datetime-local"
-                name="delivery_date"
-                required
-                value={formData.delivery_date}
-                onChange={handleChange}
-                className="w-full bg-gray-900 border border-gray-750 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Miles</label>
-              <input
-                type="number"
-                name="miles"
-                value={formData.miles}
-                onChange={handleChange}
-                placeholder="750"
-                className="w-full bg-gray-900 border border-gray-750 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Weight (lbs)</label>
-              <input
-                type="number"
-                name="weight"
-                value={formData.weight}
-                onChange={handleChange}
-                placeholder="42000"
-                className="w-full bg-gray-900 border border-gray-750 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Commodity</label>
-              <input
-                type="text"
-                name="commodity"
-                value={formData.commodity}
-                onChange={handleChange}
-                placeholder="General Freight"
-                className="w-full bg-gray-900 border border-gray-750 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Status</label>
+              <label className="block text-xs font-medium text-gray-300 mb-1">
+                Status
+              </label>
               <select
                 name="status"
                 value={formData.status}
                 onChange={handleChange}
-                className="w-full bg-gray-900 border border-gray-750 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
               >
-                <option value="Available">Available</option>
-                <option value="In Transit">In Transit</option>
-                <option value="Delivered">Delivered</option>
+                {LOAD_STATUSES.filter((status) =>
+                  ["DRAFT", "QUOTED", "PENDING_ASSIGNMENT"].includes(status),
+                ).map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Notes</label>
-            <textarea
-              name="notes"
-              rows={2}
-              value={formData.notes}
+            <label className="block text-xs font-medium text-gray-300 mb-1">
+              Assign Driver
+            </label>
+            <select
+              name="driverId"
+              value={formData.driverId}
               onChange={handleChange}
-              placeholder="Special instructions, gate codes, etc."
-              className="w-full bg-gray-900 border border-gray-750 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
-            ></textarea>
+              disabled={driversLoading}
+              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500 disabled:opacity-60"
+            >
+              <option value="">
+                {driversLoading ? "Loading drivers..." : "-- Unassigned --"}
+              </option>
+              {drivers.map((driver) => (
+                <option key={driver.id} value={driver.id}>
+                  {formatPersonName(driver)}{" "}
+                  {driver.truck_number ? `(Truck: ${driver.truck_number})` : ""}
+                </option>
+              ))}
+            </select>
+            {driversError && (
+              <div className="mt-2 flex items-center justify-between gap-3 text-xs text-red-300" role="alert">
+                <span>{driversError}</span>
+                <button
+                  className="shrink-0 underline underline-offset-2 hover:text-red-200"
+                  onClick={() => {
+                    const controller = new AbortController();
+                    void loadDrivers(controller.signal);
+                  }}
+                  type="button"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+            {!driversLoading && !driversError && drivers.length === 0 && (
+              <p className="mt-2 text-xs text-amber-300">
+                No drivers were returned by the API. Check that the driver was
+                saved to this environment.
+              </p>
+            )}
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-700">
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-700 mt-6">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition"
+              className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm font-medium transition"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition disabled:opacity-50"
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition disabled:opacity-50"
             >
-              {loading ? 'Saving...' : 'Save Load'}
+              {loading ? "Saving..." : "Add Load"}
             </button>
           </div>
         </form>

@@ -1,55 +1,79 @@
-import { IsString, IsNotEmpty, IsOptional, IsNumber, IsDateString, Min } from 'class-validator';
+import {
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsIn,
+  IsDateString,
+  Matches,
+  IsString,
+  Min,
+} from 'class-validator';
+
+export const LOAD_STATUSES = [
+  'DRAFT',
+  'QUOTED',
+  'PENDING_ASSIGNMENT',
+  'ASSIGNED',
+  'DISPATCHED',
+  'AT_PICKUP',
+  'LOADED',
+  'IN_TRANSIT',
+  'AT_DELIVERY',
+  'DELIVERED',
+  'INVOICED',
+  'COMPLETED',
+] as const;
+
+export type LoadStatus = (typeof LOAD_STATUSES)[number];
 
 export class CreateLoadDto {
   @IsString()
   @IsNotEmpty()
-  load_number: string;
+  origin: string;
 
   @IsString()
   @IsNotEmpty()
-  broker: string;
+  destination: string;
 
   @IsString()
   @IsOptional()
-  customer?: string;
-
-  @IsString()
-  @IsNotEmpty()
-  pickup_location: string;
-
-  @IsString()
-  @IsNotEmpty()
-  delivery_location: string;
-
-  @IsDateString()
-  pickup_date: Date;
-
-  @IsDateString()
-  delivery_date: Date;
+  broker?: string;
 
   @IsNumber()
   @Min(0, { message: 'Rate cannot be negative' })
   rate: number;
 
-  @IsNumber()
+  @IsDateString()
   @IsOptional()
-  @Min(0)
-  miles?: number;
+  pickupDate?: string | null;
 
-  @IsNumber()
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, {
+    message: 'Pickup time must use 24-hour HH:mm format',
+  })
   @IsOptional()
-  @Min(0)
-  weight?: number;
+  pickupTime?: string | null;
+
+  @IsDateString()
+  @IsOptional()
+  deliveryDate?: string | null;
+
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, {
+    message: 'Delivery time must use 24-hour HH:mm format',
+  })
+  @IsOptional()
+  deliveryTime?: string | null;
+
+  @IsIn(LOAD_STATUSES)
+  @IsOptional()
+  status?: LoadStatus;
+
+  @IsInt()
+  @IsOptional()
+  @Min(1)
+  driverId?: number | null;
 
   @IsString()
   @IsOptional()
-  commodity?: string;
-
-  @IsString()
-  @IsOptional()
-  status?: string;
-
-  @IsString()
-  @IsOptional()
-  notes?: string;
+  truckUnitNumber?: string | null;
 }

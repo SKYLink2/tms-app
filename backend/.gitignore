@@ -54,6 +54,8 @@ pids
 *.pid
 *.seed
 *.pid.lock
+/uploads/
+/private-compliance-files/
 
 # Dependencies
 node_modules/
