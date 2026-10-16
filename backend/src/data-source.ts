@@ -2,6 +2,8 @@ import 'dotenv/config';
 import { DataSource } from 'typeorm';
 import { Driver } from './drivers/entities/driver.entity.js';
 import { Equipment } from './equipment/entities/equipment.entity.js';
+import { Device } from './equipment/entities/device.entity.js';
+import { EquipmentAssignment } from './equipment/entities/equipment-assignment.entity.js';
 import { Settlement } from './accounting/entities/settlement.entity.js';
 import { FuelExpense } from './accounting/entities/fuel-expense.entity.js';
 import { DriverCompliance } from './compliance/entities/compliance.entity.js';
@@ -24,6 +26,9 @@ import { AddLoadAppointmentTimes1791919200000 } from './database/migrations/1791
 import { LinkComplianceAndDrivers1791922800000 } from './database/migrations/1791922800000-LinkComplianceAndDrivers.js';
 import { CreateNotifications1791924000000 } from './database/migrations/1791924000000-CreateNotifications.js';
 import { Notification } from './notifications/notification.entity.js';
+import { CreateEquipmentAssignments1791924600000 } from './database/migrations/1791924600000-CreateEquipmentAssignments.js';
+import { MaintenanceRecord } from './equipment/entities/maintenance-record.entity.js';
+import { CreateMaintenanceRecords1791925200000 } from './database/migrations/1791925200000-CreateMaintenanceRecords.js';
 
 function requiredEnv(name: string): string {
   const value = process.env[name];
@@ -50,6 +55,9 @@ export default new DataSource({
     LoadUser,
     Driver,
     Equipment,
+    Device,
+    EquipmentAssignment,
+    MaintenanceRecord,
     Settlement,
     FuelExpense,
     DriverCompliance,
@@ -72,6 +80,8 @@ export default new DataSource({
     AddLoadAppointmentTimes1791919200000,
     LinkComplianceAndDrivers1791922800000,
     CreateNotifications1791924000000,
+    CreateEquipmentAssignments1791924600000,
+    CreateMaintenanceRecords1791925200000,
   ],
   synchronize: false,
 });

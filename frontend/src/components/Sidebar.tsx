@@ -9,25 +9,25 @@ const navigation = [
     href: '/',
     label: 'Dashboard / Loads',
     icon: '🚛',
-    roles: ['admin', 'owner', 'dispatch_manager', 'dispatcher'],
+    roles: ['admin', 'owner', 'dispatch_manager', 'dispatcher', 'fleet_manager'],
   },
   {
     href: '/schedule',
     label: 'Weekly Schedule Board',
     icon: '📅',
-    roles: ['admin', 'owner', 'dispatch_manager', 'dispatcher'],
+    roles: ['admin', 'owner', 'dispatch_manager', 'dispatcher', 'fleet_manager'],
   },
   {
     href: '/drivers',
     label: 'Drivers',
     icon: '👤',
-    roles: ['admin', 'owner', 'dispatch_manager', 'dispatcher'],
+    roles: ['admin', 'owner', 'dispatch_manager', 'dispatcher', 'fleet_manager', 'safety'],
   },
   {
     href: '/equipment',
     label: 'Equipment & Fleet',
     icon: '📦',
-    roles: ['admin', 'owner', 'dispatch_manager', 'dispatcher'],
+    roles: ['admin', 'owner', 'dispatch_manager', 'fleet_manager'],
   },
   {
     href: '/accounting',
@@ -39,13 +39,27 @@ const navigation = [
     href: '/compliance',
     label: 'HR & Compliance',
     icon: '🛡️',
+    roles: ['admin', 'owner', 'safety'],
+  },
+  {
+    href: '/users',
+    label: 'User Management',
+    icon: '👥',
     roles: ['admin', 'owner'],
   },
   {
     href: '/driver',
     label: 'Driver Portal',
     icon: '📱',
-    roles: ['admin', 'owner', 'dispatch_manager', 'dispatcher', 'driver'],
+    roles: [
+      'admin',
+      'owner',
+      'dispatch_manager',
+      'dispatcher',
+      'driver',
+      'fleet_manager',
+      'safety',
+    ],
   },
 ];
 

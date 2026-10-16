@@ -34,6 +34,7 @@ export function formatNotificationTime(dateString: string | Date): string {
 export default function NotificationCenter() {
   const { currentRole } = useRole();
   const [notifications, setNotifications] = useState<SystemNotification[]>([]);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [hasPermission, setHasPermission] = useState(
     () =>
@@ -43,6 +44,7 @@ export default function NotificationCenter() {
   );
   const hasLoadedNotifications = useRef(false);
   const seenNotificationIds = useRef(new Set<string>());
+  const hasLoggedFetchError = useRef(false);
 
   // Request Web Push Notification Permissions
   const requestPushPermission = async () => {
@@ -63,6 +65,8 @@ export default function NotificationCenter() {
         if (!response.ok) {
           throw new Error(`Failed to fetch notifications (${response.status})`);
         }
+        hasLoggedFetchError.current = false;
+        setFetchError(null);
         const data = (await response.json()) as SystemNotification[];
         const role = currentRole.toUpperCase();
         const dispatcherRoles = ['ADMIN', 'OWNER', 'DISPATCH_MANAGER', 'DISPATCHER'];
@@ -104,7 +108,17 @@ export default function NotificationCenter() {
         hasLoadedNotifications.current = true;
         setNotifications(visibleNotifications);
       } catch (err) {
-        console.error('Error fetching notifications:', err);
+        const message =
+          err instanceof TypeError
+            ? `Can't reach the notifications API at ${API_URL}. Check that the backend is running and NEXT_PUBLIC_API_URL points to it.`
+            : err instanceof Error
+              ? err.message
+              : 'Unable to fetch notifications.';
+        setFetchError(message);
+        if (!hasLoggedFetchError.current) {
+          console.error('Error fetching notifications:', err);
+          hasLoggedFetchError.current = true;
+        }
       }
     };
 
@@ -183,6 +197,14 @@ export default function NotificationCenter() {
 
             {/* Notification Stream */}
             <div className="space-y-3">
+              {fetchError && (
+                <p
+                  role="alert"
+                  className="rounded-lg border border-rose-800/60 bg-rose-950/40 p-3 text-xs text-rose-300"
+                >
+                  {fetchError}
+                </p>
+              )}
               {notifications.length === 0 ? (
                 <div className="text-center py-12 text-xs text-gray-500">
                   No activity events recorded yet.

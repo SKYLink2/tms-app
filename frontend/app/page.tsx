@@ -61,7 +61,7 @@ export default function LoadsDashboard() {
   }, [currentUser, router]);
 
   const canManageLoads = currentUser !== null &&
-    ["admin", "owner", "dispatch_manager", "dispatcher"].includes(currentUser.role);
+    ["admin", "owner", "dispatch_manager", "dispatcher", "fleet_manager"].includes(currentUser.role);
 
   const totalRevenue = loads.reduce(
     (sum, load) => sum + Number(load.rate || 0),
@@ -339,6 +339,8 @@ export default function LoadsDashboard() {
               <select value={userForm.role} onChange={(event) => setUserForm({ ...userForm, role: event.target.value, driverId: "" })} className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-white">
                 <option value="dispatcher">Dispatcher</option>
                 <option value="dispatch_manager">Dispatch Manager</option>
+                <option value="fleet_manager">Fleet Manager</option>
+                <option value="safety">Safety Officer</option>
                 <option value="owner">Owner</option>
                 <option value="admin">Admin</option>
                 <option value="driver">Driver</option>

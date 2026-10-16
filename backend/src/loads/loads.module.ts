@@ -16,5 +16,6 @@ import { NotificationsModule } from '../notifications/notifications.module.js';
   ],
   controllers: [LoadsController],
   providers: [LoadsService, LoadAuthService, LoadAuthGuard],
+  exports: [LoadAuthGuard, LoadAuthService],
 })
 export class LoadsModule {}

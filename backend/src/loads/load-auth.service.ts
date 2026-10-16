@@ -112,7 +112,10 @@ export class LoadAuthService {
     return this.publicUser(user);
   }
 
-  async currentUser(request: Request): Promise<AuthenticatedLoadUser> {
+  async currentUser(
+    request: Request,
+    response?: Response,
+  ): Promise<AuthenticatedLoadUser> {
     const token = cookieValue(request);
     if (!token) throw new UnauthorizedException('Load board login required');
     const [id, expiryText, fingerprint, signature, ...extra] = token.split('.');
@@ -142,16 +145,13 @@ export class LoadAuthService {
     if (!safeEqual(fingerprint, passwordFingerprint(user.passwordHash))) {
       throw new UnauthorizedException('Load board session is no longer valid');
     }
+    if (response) this.setSessionCookie(user, expires, response);
     return this.publicUser(user);
   }
 
   logout(response: Response): void {
-    response.clearCookie(SESSION_COOKIE, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/loads',
-    });
+    response.clearCookie(SESSION_COOKIE, this.sessionCookieOptions('/'));
+    response.clearCookie(SESSION_COOKIE, this.sessionCookieOptions('/loads'));
   }
 
   async changePassword(
@@ -347,13 +347,27 @@ export class LoadAuthService {
   ): void {
     const fingerprint = passwordFingerprint(user.passwordHash);
     const payload = `${user.id}.${expires}.${fingerprint}`;
-    response.cookie(SESSION_COOKIE, `${payload}.${sessionSignature(payload)}`, {
+    response.clearCookie(
+      SESSION_COOKIE,
+      this.sessionCookieOptions('/loads'),
+    );
+    response.cookie(
+      SESSION_COOKIE,
+      `${payload}.${sessionSignature(payload)}`,
+      {
+        ...this.sessionCookieOptions('/'),
+        maxAge: SESSION_TTL_SECONDS * 1000,
+      },
+    );
+  }
+
+  private sessionCookieOptions(path: string) {
+    return {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/loads',
-      maxAge: SESSION_TTL_SECONDS * 1000,
-    });
+      sameSite: 'strict' as const,
+      path,
+    };
   }
 
   private async verifyPassword(

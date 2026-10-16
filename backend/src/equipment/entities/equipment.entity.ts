@@ -29,8 +29,8 @@ export class Equipment {
   @Column({ type: 'character varying', nullable: true })
   trailerType: string | null;
 
-  // Operational Status: 'Active', 'In Maintenance', 'Out of Service'
-  @Column({ default: 'Active' })
+  // Operational status includes AVAILABLE, ASSIGNED, and MAINTENANCE.
+  @Column({ default: 'AVAILABLE' })
   status: string;
 
   // Onboard gear and inventory are stored as a PostgreSQL text array.

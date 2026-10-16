@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
+import WorldClock from './WorldClock';
 import NotificationCenter from '@/components/NotificationCenter';
 import { useRole } from './role-context';
 
@@ -98,6 +99,7 @@ export default function Header() {
       </div>
 
       <div className="flex items-center space-x-4">
+        <WorldClock />
         <NotificationCenter />
 
         <div className="relative pl-3 border-l border-gray-800" ref={menuRef}>

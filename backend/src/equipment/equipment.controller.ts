@@ -1,5 +1,13 @@
 // backend/src/equipment/equipment.controller.ts
-import { Controller, Get, Post, Body, Param, Patch } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { EquipmentService } from './equipment.service.js';
 import { CreateEquipmentDto } from './dto/create-equipment.dto.js';
 
@@ -20,5 +28,18 @@ export class EquipmentController {
   @Patch(':id/status')
   updateStatus(@Param('id') id: string, @Body('status') status: string) {
     return this.equipmentService.updateStatus(id, status);
+  }
+
+  @Patch(':id/maintenance')
+  toggleMaintenance(
+    @Param('id') id: string,
+    @Body('status') status: 'AVAILABLE' | 'MAINTENANCE',
+  ) {
+    if (status !== 'AVAILABLE' && status !== 'MAINTENANCE') {
+      throw new BadRequestException(
+        'Status must be AVAILABLE or MAINTENANCE.',
+      );
+    }
+    return this.equipmentService.toggleMaintenance(id, status);
   }
 }

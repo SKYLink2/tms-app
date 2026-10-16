@@ -15,7 +15,12 @@ import { UpdateLoadLifecycleDto } from './dto/update-load-lifecycle.dto.js';
 import type { AuthenticatedLoadUser } from './load-auth.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 
-const PRIVILEGED_ROLES = ['admin', 'owner', 'dispatch_manager'] as const;
+const PRIVILEGED_ROLES = [
+  'admin',
+  'owner',
+  'dispatch_manager',
+  'fleet_manager',
+] as const;
 const DRAFT_STATUSES = ['DRAFT', 'QUOTED', 'PENDING_ASSIGNMENT'];
 
 export type LoadFileKind =

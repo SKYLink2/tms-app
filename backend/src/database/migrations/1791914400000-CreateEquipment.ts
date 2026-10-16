@@ -25,7 +25,7 @@ export class CreateEquipment1791914400000 implements MigrationInterface {
           {
             name: 'status',
             type: 'character varying',
-            default: "'Active'",
+            default: "'AVAILABLE'",
           },
           { name: 'inventory', type: 'text', isArray: true, isNullable: true },
           { name: 'lastServiceDate', type: 'date', isNullable: true },

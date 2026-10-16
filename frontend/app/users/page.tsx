@@ -8,7 +8,9 @@ type UserRole =
   | 'owner'
   | 'dispatch_manager'
   | 'dispatcher'
-  | 'driver';
+  | 'driver'
+  | 'fleet_manager'
+  | 'safety';
 
 interface User {
   id: string;
@@ -30,8 +32,19 @@ const ROLES: UserRole[] = [
   'owner',
   'dispatch_manager',
   'dispatcher',
+  'fleet_manager',
+  'safety',
   'driver',
 ];
+const ROLE_LABELS: Record<UserRole, string> = {
+  admin: 'Admin',
+  owner: 'Owner',
+  dispatch_manager: 'Dispatch Manager',
+  dispatcher: 'Dispatcher',
+  fleet_manager: 'Fleet Manager',
+  safety: 'Safety Officer',
+  driver: 'Driver',
+};
 
 async function errorMessage(response: Response): Promise<string> {
   const body = (await response.json().catch(() => null)) as
@@ -256,7 +269,7 @@ export default function UserManagementPage() {
                         (role) => role !== 'driver' || user.role === 'driver',
                       ).map((role) => (
                         <option key={role} value={role}>
-                          {role.replaceAll('_', ' ')}
+                          {ROLE_LABELS[role]}
                         </option>
                       ))}
                     </select>
@@ -358,7 +371,7 @@ export default function UserManagementPage() {
                 >
                   {ROLES.map((role) => (
                     <option key={role} value={role}>
-                      {role.replaceAll('_', ' ')}
+                      {ROLE_LABELS[role]}
                     </option>
                   ))}
                 </select>

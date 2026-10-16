@@ -55,8 +55,11 @@ export class LoadsController {
   }
 
   @Get('auth/session')
-  async session(@Req() request: Request) {
-    return this.auth.currentUser(request);
+  async session(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    return this.auth.currentUser(request, response);
   }
 
   @Post('auth/logout')

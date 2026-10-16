@@ -11,6 +11,8 @@ export const LOAD_USER_ROLES = [
   'owner',
   'admin',
   'driver',
+  'fleet_manager',
+  'safety',
 ] as const;
 
 export type LoadUserRole = (typeof LOAD_USER_ROLES)[number];
@@ -27,7 +29,7 @@ export class LoadUser {
   passwordHash: string;
 
   @Column({ type: 'character varying' })
-  role: LoadUserRole;
+  role: LoadUserRole; // 'admin' | 'owner' | 'dispatch_manager' | 'dispatcher' | 'driver' | 'fleet_manager' | 'safety'
 
   @Column({ type: 'integer', nullable: true, unique: true })
   driverId: number | null;

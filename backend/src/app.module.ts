@@ -10,6 +10,8 @@ import { DriversModule } from './drivers/drivers.module.js';
 import { Driver } from './drivers/entities/driver.entity.js';
 import { EquipmentModule } from './equipment/equipment.module.js';
 import { Equipment } from './equipment/entities/equipment.entity.js';
+import { Device } from './equipment/entities/device.entity.js';
+import { EquipmentAssignment } from './equipment/entities/equipment-assignment.entity.js';
 import { AccountingModule } from './accounting/accounting.module.js';
 import { Settlement } from './accounting/entities/settlement.entity.js';
 import { FuelExpense } from './accounting/entities/fuel-expense.entity.js';
@@ -34,6 +36,9 @@ import { LinkDriverAccounts1791923400000 } from './database/migrations/179192340
 import { CreateNotifications1791924000000 } from './database/migrations/1791924000000-CreateNotifications.js';
 import { Notification } from './notifications/notification.entity.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
+import { CreateEquipmentAssignments1791924600000 } from './database/migrations/1791924600000-CreateEquipmentAssignments.js';
+import { MaintenanceRecord } from './equipment/entities/maintenance-record.entity.js';
+import { CreateMaintenanceRecords1791925200000 } from './database/migrations/1791925200000-CreateMaintenanceRecords.js';
 
 @Module({
   imports: [
@@ -53,6 +58,9 @@ import { NotificationsModule } from './notifications/notifications.module.js';
           LoadUser,
           Driver,
           Equipment,
+          Device,
+          EquipmentAssignment,
+          MaintenanceRecord,
           Settlement,
           FuelExpense,
           DriverCompliance,
@@ -76,6 +84,8 @@ import { NotificationsModule } from './notifications/notifications.module.js';
           LinkComplianceAndDrivers1791922800000,
           LinkDriverAccounts1791923400000,
           CreateNotifications1791924000000,
+          CreateEquipmentAssignments1791924600000,
+          CreateMaintenanceRecords1791925200000,
         ],
         migrationsRun: true,
         synchronize: false,
