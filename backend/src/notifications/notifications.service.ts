@@ -23,7 +23,11 @@ export class NotificationsService {
   }
 
   async markAllAsRead() {
-    await this.notifRepo.update({}, { isRead: true });
+    await this.notifRepo
+      .createQueryBuilder()
+      .update(Notification)
+      .set({ isRead: true })
+      .execute();
     return { success: true };
   }
 }

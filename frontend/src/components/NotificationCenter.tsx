@@ -15,6 +15,22 @@ interface SystemNotification {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
+export function formatNotificationTime(dateString: string | Date): string {
+  const date = new Date(dateString);
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZoneName: 'short',
+  });
+
+  return formatter.format(date);
+}
+
 export default function NotificationCenter() {
   const { currentRole } = useRole();
   const [notifications, setNotifications] = useState<SystemNotification[]>([]);
@@ -184,12 +200,7 @@ export default function NotificationCenter() {
                     <div className="flex justify-between items-center">
                       <span className="font-bold text-blue-400 text-[11px]">{notif.title}</span>
                       <span className="text-[9px] text-gray-500">
-                        {new Date(notif.createdAt).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          month: 'short',
-                          day: 'numeric',
-                        })}
+                        {formatNotificationTime(notif.createdAt)}
                       </span>
                     </div>
                     <p className="text-[11px] text-gray-300 leading-relaxed">{notif.message}</p>
