@@ -29,11 +29,31 @@ interface FuelExpense {
   purchaseDate: string;
 }
 
+interface FuelTransaction {
+  id: string;
+  truck?: { unitNumber?: string } | null;
+  driver?: { firstName: string; lastName: string } | null;
+  externalTransactionId: string | null;
+  fuelCardAmount: string | null;
+  gallons: string | null;
+  stationName: string | null;
+  stationLocation: string | null;
+  cardTransactionAt: string;
+  receiptAmount: string | null;
+  receiptImageUrl: string | null;
+  receiptGpsLocation: string | null;
+  odometerReading: number | null;
+  calculatedMpg: string | null;
+  reconciliationStatus: 'PENDING' | 'RECONCILED' | 'DISCREPANCY_FLAGGED';
+  auditNotes: string | null;
+}
+
 export default function AccountingDashboard() {
   const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000').replace(/\/+$/, '');
-  const [activeTab, setActiveTab] = useState<'settlements' | 'fuel'>('settlements');
+  const [activeTab, setActiveTab] = useState<'settlements' | 'fuel' | 'reconciliation'>('settlements');
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [fuelExpenses, setFuelExpenses] = useState<FuelExpense[]>([]);
+  const [fuelTransactions, setFuelTransactions] = useState<FuelTransaction[]>([]);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -86,6 +106,18 @@ export default function AccountingDashboard() {
       expense.purchaseDate,
     ].some((value) => String(value ?? '').toLowerCase().includes(normalizedQuery)),
   );
+  const filteredFuelTransactions = fuelTransactions.filter((transaction) =>
+    [
+      transaction.truck?.unitNumber,
+      transaction.driver?.firstName,
+      transaction.driver?.lastName,
+      transaction.externalTransactionId,
+      transaction.stationName,
+      transaction.stationLocation,
+      transaction.reconciliationStatus,
+      transaction.auditNotes,
+    ].some((value) => String(value ?? '').toLowerCase().includes(normalizedQuery)),
+  );
 
   const fetchData = useCallback(async () => {
     try {
@@ -101,6 +133,17 @@ export default function AccountingDashboard() {
         throw new Error(`Failed to fetch fuel expenses (${resFuel.status})`);
       }
       setFuelExpenses(await resFuel.json());
+
+      const resTransactions = await fetch(
+        `${apiUrl}/accounting/fuel/transactions`,
+        { credentials: 'include' },
+      );
+      if (!resTransactions.ok) {
+        throw new Error(
+          `Failed to fetch fuel reconciliation records (${resTransactions.status})`,
+        );
+      }
+      setFuelTransactions(await resTransactions.json());
     } catch (err) {
       console.error('Error fetching accounting data:', err);
       setFetchError(
@@ -252,14 +295,14 @@ export default function AccountingDashboard() {
             >
               + Generate Settlement
             </button>
-          ) : (
+          ) : activeTab === 'fuel' ? (
             <button
               onClick={() => setIsFuelModalOpen(true)}
               className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 font-semibold text-sm rounded-xl transition shadow-lg shadow-emerald-600/20"
             >
               + Log Fuel Expense
             </button>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -275,7 +318,9 @@ export default function AccountingDashboard() {
           placeholder={
             activeTab === 'settlements'
               ? 'Search by driver, week, status, or amount...'
-              : 'Search by truck, driver, location, or expense...'
+              : activeTab === 'fuel'
+                ? 'Search by truck, driver, location, or expense...'
+                : 'Search card transactions, driver, truck, or discrepancy...'
           }
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
@@ -300,6 +345,14 @@ export default function AccountingDashboard() {
           }`}
         >
           Fuel Card Expenses
+        </button>
+        <button
+          onClick={() => setActiveTab('reconciliation')}
+          className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${
+            activeTab === 'reconciliation' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
+          }`}
+        >
+          Receipt Reconciliation
         </button>
       </div>
 
@@ -394,6 +447,112 @@ export default function AccountingDashboard() {
                     {fuelExpenses.length === 0
                       ? 'No fuel expenses have been logged yet.'
                       : 'No fuel expenses match your search.'}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Receipt Reconciliation Table */}
+      {activeTab === 'reconciliation' && (
+        <div className="overflow-x-auto rounded-2xl border border-gray-800 bg-gray-900 shadow-xl">
+          <table className="w-full min-w-[1050px] text-left text-xs">
+            <thead className="bg-gray-950/70 uppercase text-gray-400">
+              <tr>
+                <th className="p-4">Purchase</th>
+                <th className="p-4">Truck / Driver</th>
+                <th className="p-4">Card / Receipt</th>
+                <th className="p-4">Location</th>
+                <th className="p-4">Odometer / MPG</th>
+                <th className="p-4">Receipt</th>
+                <th className="p-4">Reconciliation</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-800">
+              {filteredFuelTransactions.map((transaction) => (
+                <tr key={transaction.id} className="align-top hover:bg-gray-800/40">
+                  <td className="p-4 text-gray-300">
+                    {new Date(transaction.cardTransactionAt).toLocaleString()}
+                    {transaction.externalTransactionId && (
+                      <div className="mt-1 font-mono text-[10px] text-gray-500">
+                        {transaction.externalTransactionId}
+                      </div>
+                    )}
+                  </td>
+                  <td className="p-4">
+                    <div className="font-semibold text-white">
+                      {transaction.truck?.unitNumber ?? 'Truck unavailable'}
+                    </div>
+                    <div className="mt-1 text-gray-400">
+                      {transaction.driver
+                        ? `${transaction.driver.firstName} ${transaction.driver.lastName}`
+                        : 'Driver not linked'}
+                    </div>
+                  </td>
+                  <td className="p-4 whitespace-nowrap text-gray-300">
+                    Card: {transaction.fuelCardAmount == null ? '—' : `$${Number(transaction.fuelCardAmount).toFixed(2)}`}
+                    <br />
+                    Receipt: {transaction.receiptAmount == null ? '—' : `$${Number(transaction.receiptAmount).toFixed(2)}`}
+                    <br />
+                    {transaction.gallons ?? '—'} gal
+                  </td>
+                  <td className="p-4 text-gray-400">
+                    {transaction.stationName || transaction.stationLocation || 'Station unavailable'}
+                    {transaction.receiptGpsLocation && (
+                      <div className="mt-1 font-mono text-[10px]">
+                        Receipt GPS: {transaction.receiptGpsLocation}
+                      </div>
+                    )}
+                  </td>
+                  <td className="p-4 whitespace-nowrap text-gray-300">
+                    {transaction.odometerReading?.toLocaleString() ?? '—'}
+                    <br />
+                    {transaction.calculatedMpg == null
+                      ? 'MPG pending'
+                      : `${Number(transaction.calculatedMpg).toFixed(2)} MPG`}
+                  </td>
+                  <td className="p-4">
+                    {transaction.receiptImageUrl ? (
+                      <a
+                        href={`${apiUrl}${transaction.receiptImageUrl}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-semibold text-blue-400 hover:text-blue-300"
+                      >
+                        View image
+                      </a>
+                    ) : (
+                      <span className="text-gray-500">Not submitted</span>
+                    )}
+                  </td>
+                  <td className="max-w-64 p-4">
+                    <span
+                      className={`rounded-full border px-2 py-1 text-[10px] font-bold ${
+                        transaction.reconciliationStatus === 'RECONCILED'
+                          ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                          : transaction.reconciliationStatus === 'DISCREPANCY_FLAGGED'
+                            ? 'border-red-500/30 bg-red-500/10 text-red-300'
+                            : 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+                      }`}
+                    >
+                      {transaction.reconciliationStatus.replaceAll('_', ' ')}
+                    </span>
+                    {transaction.auditNotes && (
+                      <p className="mt-2 leading-relaxed text-red-200">
+                        {transaction.auditNotes}
+                      </p>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {filteredFuelTransactions.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-gray-500">
+                    {fuelTransactions.length === 0
+                      ? 'No card transactions or driver receipts have been recorded.'
+                      : 'No card transactions match your search.'}
                   </td>
                 </tr>
               )}

@@ -6,6 +6,7 @@ import { Device } from './equipment/entities/device.entity.js';
 import { EquipmentAssignment } from './equipment/entities/equipment-assignment.entity.js';
 import { Settlement } from './accounting/entities/settlement.entity.js';
 import { FuelExpense } from './accounting/entities/fuel-expense.entity.js';
+import { FuelTransaction } from './accounting/entities/fuel-transaction.entity.js';
 import { DriverCompliance } from './compliance/entities/compliance.entity.js';
 import { BackfillLoadNumbers1791847200000 } from './database/migrations/backfill-load-numbers1791847200000.js';
 import { AddLoadRoutesAndDrivers1791847500000 } from './database/migrations/add-load-routes-and-drivers1791847500000.js';
@@ -29,6 +30,7 @@ import { Notification } from './notifications/notification.entity.js';
 import { CreateEquipmentAssignments1791924600000 } from './database/migrations/1791924600000-CreateEquipmentAssignments.js';
 import { MaintenanceRecord } from './equipment/entities/maintenance-record.entity.js';
 import { CreateMaintenanceRecords1791925200000 } from './database/migrations/1791925200000-CreateMaintenanceRecords.js';
+import { CreateFuelTransactions1791925800000 } from './database/migrations/1791925800000-CreateFuelTransactions.js';
 
 function requiredEnv(name: string): string {
   const value = process.env[name];
@@ -60,6 +62,7 @@ export default new DataSource({
     MaintenanceRecord,
     Settlement,
     FuelExpense,
+    FuelTransaction,
     DriverCompliance,
     Notification,
   ],
@@ -82,6 +85,7 @@ export default new DataSource({
     CreateNotifications1791924000000,
     CreateEquipmentAssignments1791924600000,
     CreateMaintenanceRecords1791925200000,
+    CreateFuelTransactions1791925800000,
   ],
   synchronize: false,
 });

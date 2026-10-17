@@ -39,6 +39,8 @@ import { NotificationsModule } from './notifications/notifications.module.js';
 import { CreateEquipmentAssignments1791924600000 } from './database/migrations/1791924600000-CreateEquipmentAssignments.js';
 import { MaintenanceRecord } from './equipment/entities/maintenance-record.entity.js';
 import { CreateMaintenanceRecords1791925200000 } from './database/migrations/1791925200000-CreateMaintenanceRecords.js';
+import { CreateFuelTransactions1791925800000 } from './database/migrations/1791925800000-CreateFuelTransactions.js';
+import { FuelTransaction } from './accounting/entities/fuel-transaction.entity.js';
 
 @Module({
   imports: [
@@ -65,6 +67,7 @@ import { CreateMaintenanceRecords1791925200000 } from './database/migrations/179
           FuelExpense,
           DriverCompliance,
           Notification,
+          FuelTransaction,
         ],
         migrations: [
           BackfillLoadNumbers1791847200000,
@@ -86,6 +89,7 @@ import { CreateMaintenanceRecords1791925200000 } from './database/migrations/179
           CreateNotifications1791924000000,
           CreateEquipmentAssignments1791924600000,
           CreateMaintenanceRecords1791925200000,
+          CreateFuelTransactions1791925800000,
         ],
         migrationsRun: true,
         synchronize: false,
@@ -97,6 +101,7 @@ import { CreateMaintenanceRecords1791925200000 } from './database/migrations/179
     AccountingModule,
     ComplianceModule,
     NotificationsModule,
+    
   ],
   controllers: [AppController],
   providers: [AppService],
